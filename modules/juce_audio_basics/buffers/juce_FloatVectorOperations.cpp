@@ -1200,10 +1200,26 @@ void JUCE_CALLTYPE FloatVectorOperationsBase<FloatType, CountType>::fill (FloatT
 }
 
 template <typename FloatType, typename CountType>
+static bool isMemoryOverlapping (const FloatType* a, CountType aCount,
+                                 const FloatType* b, CountType bCount) noexcept
+{
+    // Convert pointers to integral addresses
+    const std::uintptr_t aStart = reinterpret_cast<std::uintptr_t>(a);
+    const std::uintptr_t bStart = reinterpret_cast<std::uintptr_t>(b);
+
+    const std::uintptr_t aEnd = aStart + (std::size_t) aCount * sizeof (FloatType);
+    const std::uintptr_t bEnd = bStart + (std::size_t) bCount * sizeof (FloatType);
+
+    // Check if the two ranges overlap
+    return std::max (aStart, bStart) < std::min (aEnd, bEnd);
+}
+
+template <typename FloatType, typename CountType>
 void JUCE_CALLTYPE FloatVectorOperationsBase<FloatType, CountType>::copy (FloatType* dest,
                                                                           const FloatType* src,
                                                                           CountType numValues) noexcept
 {
+    jassert (! isMemoryOverlapping (dest, numValues, src, numValues));
     memcpy (dest, src, (size_t) numValues * sizeof (FloatType));
 }
 
@@ -1213,6 +1229,7 @@ void JUCE_CALLTYPE FloatVectorOperationsBase<FloatType, CountType>::copyWithMult
                                                                                       FloatType multiplier,
                                                                                       CountType numValues) noexcept
 {
+    jassert (! isMemoryOverlapping (dest, numValues, src, numValues));
     FloatVectorHelpers::copyWithMultiply (dest, src, multiplier, numValues);
 }
 
