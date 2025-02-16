@@ -61,17 +61,18 @@ public:
         ChangeBroadcaster class will send a change message, so you can register
         listeners and update them when the list changes.
 
-        @param fileFilter       an optional filter to select which files are
-                                included in the list. If this is nullptr, then all files
-                                and directories are included. Make sure that the filter
-                                doesn't get deleted during the lifetime of this object
-        @param threadToUse      a thread object that this list can use
-                                to scan for files as a background task. Make sure
-                                that the thread you give it has been started, or you
-                                won't get any files!
+        @param fileFilter           an optional filter to select which files are
+                                    included in the list. If this is nullptr, then all files
+                                    and directories are included. Make sure that the filter
+                                    doesn't get deleted during the lifetime of this object
+        @param threadToUse          a thread object that this list can use
+                                    to scan for files as a background task. Make sure
+                                    that the thread you give it has been started, or you
+                                    won't get any files!
+        @param searchRecursively    whether all the subdirectories should also be searched
     */
     DirectoryContentsList (const FileFilter* fileFilter,
-                           TimeSliceThread& threadToUse);
+                           TimeSliceThread& threadToUse, bool searchRecursively = false);
 
     /** Destructor. */
     ~DirectoryContentsList() override;
@@ -139,9 +140,11 @@ public:
             This isn't a full pathname, it's just the last part of the path, same as you'd
             get from File::getFileName().
 
-            To get the full pathname, use DirectoryContentsList::getDirectory().getChildFile (filename).
+            To get the full pathname, use fullpath.
         */
         String filename;
+
+        String fullpath;
 
         /** File size in bytes. */
         int64 fileSize;
@@ -211,6 +214,7 @@ private:
     File root;
     const FileFilter* fileFilter = nullptr;
     TimeSliceThread& thread;
+    const bool isRecursive;
     int fileTypeFlags = File::ignoreHiddenFiles | File::findFiles;
 
     CriticalSection fileListLock;

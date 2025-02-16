@@ -35,8 +35,8 @@
 namespace juce
 {
 
-DirectoryContentsList::DirectoryContentsList (const FileFilter* f, TimeSliceThread& t)
-    : fileFilter (f), thread (t)
+DirectoryContentsList::DirectoryContentsList (const FileFilter* f, TimeSliceThread& t, bool searchRecursively)
+    : fileFilter (f), thread (t), isRecursive (searchRecursively)
 {
 }
 
@@ -119,7 +119,7 @@ void DirectoryContentsList::refresh()
 
     if (root.isDirectory())
     {
-        fileFindHandle = std::make_unique<RangedDirectoryIterator> (root, false, "*", fileTypeFlags);
+        fileFindHandle = std::make_unique<RangedDirectoryIterator> (root, isRecursive, "*", fileTypeFlags);
         shouldStop = false;
         isSearching = true;
         thread.addTimeSliceClient (this);
@@ -157,7 +157,7 @@ File DirectoryContentsList::getFile (const int index) const
     const ScopedLock sl (fileListLock);
 
     if (auto* info = files [index])
-        return root.getChildFile (info->filename);
+        return File (info->fullpath);
 
     return {};
 }
@@ -167,7 +167,7 @@ bool DirectoryContentsList::contains (const File& targetFile) const
     const ScopedLock sl (fileListLock);
 
     for (int i = files.size(); --i >= 0;)
-        if (root.getChildFile (files.getUnchecked (i)->filename) == targetFile)
+        if (File (files.getUnchecked (i)->fullpath) == targetFile)
             return true;
 
     return false;
@@ -248,6 +248,7 @@ bool DirectoryContentsList::addFile (const File& file, const bool isDir,
         auto info = std::make_unique<FileInfo>();
 
         info->filename         = file.getFileName();
+        info->fullpath         = file.getFullPathName();
         info->fileSize         = fileSize;
         info->modificationTime = modTime;
         info->creationTime     = creationTime;
@@ -255,7 +256,7 @@ bool DirectoryContentsList::addFile (const File& file, const bool isDir,
         info->isReadOnly       = isReadOnly;
 
         for (int i = files.size(); --i >= 0;)
-            if (files.getUnchecked (i)->filename == info->filename)
+            if (files.getUnchecked (i)->fullpath == info->fullpath)
                 return false;
 
         files.add (std::move (info));
@@ -267,7 +268,7 @@ bool DirectoryContentsList::addFile (const File& file, const bool isDir,
                 return a->isDirectory;
            #endif
 
-            return a->filename.compareNatural (b->filename) < 0;
+            return a->fullpath.compareNatural (b->fullpath) < 0;
         });
 
         return true;
